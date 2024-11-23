@@ -1,4 +1,4 @@
-# Tutorial # 2 : Request Body
+# Tutorial # 2 : Request Body and CRUD Operations
 from fastapi import FastAPI,status,HTTPException
 from typing import Optional
 from pydantic import BaseModel
