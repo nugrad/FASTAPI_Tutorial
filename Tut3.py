@@ -55,6 +55,7 @@ class Place(BaseModel):
 @app.post('/create-place/',response_model=Place)
 def create_place(place:Place,db:Session=Depends(get_db)):
     db_place=DBPlace(name=place.name,description=place.description,coffee=place.coffee,wifi=place.wifi,food=place.food)
+    # db_place = DBPlace(**place.dict())
     db.add(db_place)
     db.commit()
     db.refresh(db_place)
