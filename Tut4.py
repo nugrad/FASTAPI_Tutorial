@@ -101,7 +101,7 @@ def create_blog(blog:Blogs,db:Session=Depends(get_db)):
     
 
 # get blog by id
-@app.get('/get-place/{blog_id}',response_model=Blogs,tags=["Blogs"])
+@app.get('/get-blog/{blog_id}',response_model=Blogs,tags=["Blogs"])
 def get_blog(blog_id:int,db: Session = Depends(get_db)):
     blog=db.query(DBBlog).filter(DBBlog.id == blog_id).first()
     if not blog:
