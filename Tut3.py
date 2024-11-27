@@ -6,6 +6,9 @@ from sqlalchemy.orm import declarative_base,sessionmaker,Session
 from typing import Optional,List
 # from passlib.context import CryptContext
 import bcrypt
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import datetime, timedelta
+import jwt
 
 app=FastAPI()
 
@@ -22,8 +25,41 @@ def get_db():
     finally:
         db.close()
 
-# Password hashing configuration
-# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# JWT configuration
+SECRET_KEY = "your_secret_key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
+
+
+# Password hashing and verification functions using bcrypt
+def get_password_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+# OAuth2 configuration
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# JWT helper functions
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def decode_access_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
 # A SQLAlchemny ORM Place
 class DBPlace(Base):
     __tablename__ = 'places'
@@ -72,6 +108,20 @@ class UserResponse(BaseModel):
 
     class Config:
         orm_mode = True
+#--------------------------------------------
+@app.post("/token")
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(DBUser).filter(DBUser.email == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    token = create_access_token({"sub": user.email})
+    return {"access_token": token, "token_type": "bearer"}
+
+@app.get("/secure-endpoint", tags=["Secure"])
+def secure_endpoint(token: str = Depends(oauth2_scheme)):
+    payload = decode_access_token(token)
+    return {"message": f"Hello {payload['sub']}! You have accessed a secure endpoint."}
 # -------------------------------------------
 # Endpoints
 # Routes for interacting with the API
@@ -132,16 +182,7 @@ def delete_place(place_id: int, db: Session = Depends(get_db)):
 # Now Handling the user , login, password hashing things
 # For this we would create another Pydantic model for user
 #----------------------------
-# def get_password_hash(password: str) -> str:
-# #     return pwd_context.hash(password)
 
-
-# Password hashing and verification functions using bcrypt
-def get_password_hash(password: str) -> str:
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 # Create a User
 @app.post('/create-user',response_model=UserResponse,tags=["Users"])
@@ -168,13 +209,7 @@ def get_user(user_id:int,db:Session=Depends(get_db)):
         raise HTTPException(status_code=404, detail="place not found")
     return user
 
-# logging in the user
-@app.post('/login',tags=["login"])
-def login(email: str, password: str, db: Session = Depends(get_db)):
-    user = db.query(DBUser).filter(DBUser.email == email).first()
-    if not user or not verify_password(password, user.password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    return {"message": "Login successful!"}
+
 
 
 
