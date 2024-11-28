@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <h1>My FastAPI Application</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/about">About</a>
+        </nav>
+    </header>
+    <h2>{{ content }}</h2>
+    <main>
+        {% block content %}
+        <!-- Placeholder for child templates -->
+        {% endblock %}
+    </main>
+    <footer>
+        <p>&copy; 2024 My FastAPI App</p>
+    </footer>
+</body>
+</html>
